@@ -7,30 +7,33 @@ class MoviesController < ApplicationController
   end
 
   def index
-    options = {}
     
-    if params["sort"] == "title"
-      @sort = "title"
-      options[:order] = @sort
-    elsif params["sort"] == "release_date"
-      @sort = "release_date"
-      options[:order] = @sort
+    redirect = false
+    
+    if params["sort"]
+      @sort = session[:sort] = params["sort"]
+    elsif session[:sort]
+      redirect = true
     end
     
-    if params["filter"]
-      @filter = params["filter"]
-    else
-      @filter = []
-    end
-    
-    params["ratings"].each_key {|key| @filter.push key} if params["ratings"]
-    
-    if @filter.length > 0
-      options[:conditions] = ["rating IN (?)", @filter]
-    end
-    
-    @movies = Movie.find :all, options
     @all_ratings = Movie.all_ratings
+    
+    if params["ratings"]
+      session[:filter] = params["ratings"].keys
+      redirect = true
+    elsif params["filter"]
+      @filter = session[:filter] = params["filter"]
+    elsif session[:filter]
+      redirect = true;
+    else
+      @filter = @all_ratings
+    end
+    
+    if redirect
+      redirect_to movies_path :sort => session[:sort], :filter => session[:filter]
+    end
+    
+    @movies = Movie.where(:rating => @filter).order(@sort)
   end
 
   def new
